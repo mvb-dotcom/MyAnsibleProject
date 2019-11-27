@@ -1,0 +1,108 @@
+- name: Create Azure VMs
+  hosts: localhost
+  connection: local
+  tasks:
+  - name: Create resource group
+    azure_rm_resourcegroup:
+      name: MyAnsibleRG
+      location: francecentral
+  - name: Create virtual network
+    azure_rm_virtualnetwork:
+      resource_group: MyAnsibleRG
+      name: MyAnsibleVnet
+      address_prefixes: "10.0.0.0/16"
+  - name: Add subnet
+    azure_rm_subnet:
+      resource_group: MyAnsibleRG
+      name: mywordpressSubnet
+      address_prefix: "10.0.0.0/24"
+      virtual_network: MyAnsibleVnet
+  - name: Add subnet
+    azure_rm_subnet:
+      resource_group: MyAnsibleRG
+      name: myNginxSubnet
+      address_prefix: "10.0.1.0/24"
+      virtual_network: MyAnsibleVnet
+  - name: Add subnet
+    azure_rm_subnet:
+      resource_group: MyAnsibleRG
+      name: myBDDSubnet
+      address_prefix: "10.0.2.0/24"
+      virtual_network: MyAnsibleVnet
+  - name: Create public IP address for  1st VM
+    azure_rm_publicipaddress:
+      resource_group: MyAnsibleRG
+      allocation_method: Static
+      name: myPublicIP1
+    register: output_ip_address
+  - name: Dump public IP for VM which will be created
+    debug:
+      msg: "The public IP no.1 is {{ output_ip_address.state.ip_address }}."
+  - name: Create public IP address for  2nd VM
+    azure_rm_publicipaddress:
+      resource_group: MyAnsibleRG
+      allocation_method: Static
+      name: myPublicIP2
+    register: output_ip_address
+  - name: Dump public IP for VM which will be created
+    debug:
+      msg: "The public IP no.2 is {{ output_ip_address.state.ip_address }}."
+  - name: Create Network Security Group that allows SSH
+    azure_rm_securitygroup:
+      resource_group: MyAnsibleRG
+      name: myNetworkSecurityGroup
+      rules:
+        - name: SSH
+          protocol: Tcp
+          destination_port_range: 22
+          access: Allow
+          priority: 1001
+          direction: Inbound
+  - name: Create virtual network interface card for 1st VM
+    azure_rm_networkinterface:
+      resource_group: MyAnsibleRG
+      name: myNICWordpress1
+      virtual_network: MyAnsibleVnet
+      subnet: mywordpressSubnet
+      public_ip_name: myPublicIP1
+      security_group: myNetworkSecurityGroup
+  - name: Create virtual network interface card for 2nd VM
+    azure_rm_networkinterface:
+      resource_group: MyAnsibleRG
+      name: myNICWordpress2
+      virtual_network: MyAnsibleVnet
+      subnet: mywordpressSubnet
+      public_ip_name: myPublicIP2
+      security_group: myNetworkSecurityGroup
+  - name: Create VM Wordpress 1
+    azure_rm_virtualmachine:
+      resource_group: MyAnsibleRG
+      name: myVMWordpress1
+      vm_size: Standard_DS1_v2
+      admin_username: mvb
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/mvb/.ssh/authorized_keys
+          key_data: ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAuIMmX0vJcdfoyxBaF5ZU6CthvN61HQheI27dA7JhjfmBAk7f8KpkRVS92+0lWI7IgWhGCJ6momvQ0a8xhRPn4hd3JUzG295KnsjxD16tpAJ/G61qj7xiFssKWVGNtJYq52BZIr5daj9sKcRN9EUR2h+ETg3QLuzwFi5yqPt5ejFQ9BQdANa/eh5hsSYJR6XapSAFgJH6FyKPILnLNspv+ijIwXNJVMGDricxmWsz0r1IcSrBvQt689YUwJM4E8L8WaadCoOp5jlqqp7DB1n44dVGMcZtdOnU3qB3tiWRaLR5aAsSh2HCDFcxEGJzOZulc9UrMWqjAVNHGOR3NtwNlQ== rsa-key-20190926
+      network_interfaces: myNICWordpress1
+      image:
+        offer: UbuntuServer
+        publisher: Canonical
+        sku: '16.04.0-LTS'
+        version: latest
+  - name: Create VM Wordpress 2
+    azure_rm_virtualmachine:
+      resource_group: MyAnsibleRG
+      name: myVMWordpress2
+      vm_size: Standard_DS1_v2
+      admin_username: mvb
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/mvb/.ssh/authorized_keys
+          key_data: ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAuIMmX0vJcdfoyxBaF5ZU6CthvN61HQheI27dA7JhjfmBAk7f8KpkRVS92+0lWI7IgWhGCJ6momvQ0a8xhRPn4hd3JUzG295KnsjxD16tpAJ/G61qj7xiFssKWVGNtJYq52BZIr5daj9sKcRN9EUR2h+ETg3QLuzwFi5yqPt5ejFQ9BQdANa/eh5hsSYJR6XapSAFgJH6FyKPILnLNspv+ijIwXNJVMGDricxmWsz0r1IcSrBvQt689YUwJM4E8L8WaadCoOp5jlqqp7DB1n44dVGMcZtdOnU3qB3tiWRaLR5aAsSh2HCDFcxEGJzOZulc9UrMWqjAVNHGOR3NtwNlQ== rsa-key-20190926
+      network_interfaces: myNICWordpress2
+      image:
+        offer: UbuntuServer
+        publisher: Canonical
+        sku: '16.04.0-LTS'
+        version: latest    
